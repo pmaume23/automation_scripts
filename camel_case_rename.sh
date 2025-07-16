@@ -10,23 +10,19 @@
 is_already_camel_case() {
     local input="$1"
     
-    # Check if the string contains obvious separators that need processing
+    # Check if the string contains obvious separators that need processing (but not hyphens for now)
     if [[ "$input" =~ [[:space:]_] ]]; then
         return 1  # Contains separators, needs processing
     fi
     
     # Check for multiple consecutive hyphens or other obvious issues
-    if [[ "$input" =~ [[:space:]]{2,}|_{2,} ]]; then
+    if [[ "$input" =~ [[:space:]]{2,}|_{2,}|--+ ]]; then
         return 1  # Has formatting issues, needs processing
     fi
     
-    # If it starts with uppercase and has a mix of cases, likely already camelCase
+    # If it starts with uppercase and has a mix of cases, likely already camelCase (even with single hyphens)
     if [[ "$input" =~ ^[A-Z][a-zA-Z0-9-]*$ ]] && [[ "$input" =~ [a-z] ]] && [[ "$input" =~ [A-Z] ]]; then
-        # Check if it only has single hyphens (which might be acceptable in some contexts)
-        if [[ "$input" =~ --+ ]]; then
-            return 1  # Multiple hyphens, needs processing
-        fi
-        return 0  # Probably already good camelCase
+        return 0  # Probably already good camelCase, just might need hyphen processing
     fi
     
     return 1  # Needs processing
@@ -39,13 +35,13 @@ to_camel_case() {
     
     # First check if it's already in good camelCase format
     if is_already_camel_case "$input"; then
-        # Handle single hyphens in camelCase strings (like "EEG-based")
+        # Handle single hyphens in camelCase strings (like "EEG-based" or "EEG-Based")
         if [[ "$input" =~ - ]]; then
             # Only process single hyphens, preserve the rest
             local result="$input"
             
-            # Replace hyphen followed by lowercase letter with uppercase letter
-            while [[ "$result" =~ -([a-z]) ]]; do
+            # Replace hyphen followed by any letter (lower or uppercase) with uppercase letter
+            while [[ "$result" =~ -([a-zA-Z]) ]]; do
                 local letter="${BASH_REMATCH[1]}"
                 local upper_letter=$(echo "$letter" | tr '[:lower:]' '[:upper:]')
                 result="${result/-$letter/$upper_letter}"
