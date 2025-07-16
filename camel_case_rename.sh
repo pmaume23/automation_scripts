@@ -62,24 +62,37 @@ to_camel_case() {
         return 0
     fi
     
-    # For strings that need full processing
-    # Convert to lowercase first
-    local lowercase_input=$(echo "$input" | tr '[:upper:]' '[:lower:]')
+    # For strings that need processing, preserve existing camelCase words
+    # Split by separators but preserve the internal capitalization of each word
+    local normalized="$input"
     
-    # Replace various separators and punctuation with spaces
-    local normalized=$(echo "$lowercase_input" | sed 's/[[:space:]_-]\+/ /g' | sed 's/[^a-z0-9[:space:]]/ /g' | sed 's/  \+/ /g' | sed 's/^ \+\| \+$//g')
+    # Replace various separators with spaces, but preserve word internal structure
+    normalized=$(echo "$normalized" | sed 's/[[:space:]_-]\+/ /g' | sed 's/[^a-zA-Z0-9[:space:]]/ /g' | sed 's/  \+/ /g' | sed 's/^ \+\| \+$//g')
     
-    # Split by spaces and capitalize each word
+    # Split by spaces and process each word
     local result=""
     IFS=' ' read -ra words <<< "$normalized"
     
     for word in "${words[@]}"; do
         if [[ -n "$word" ]]; then
-            # Capitalize first letter
-            first_char=$(echo "${word:0:1}" | tr '[:lower:]' '[:upper:]')
-            rest_of_word="${word:1}"
-            capitalized="${first_char}${rest_of_word}"
-            result="${result}${capitalized}"
+            # Check if this word is already in camelCase format (starts with uppercase, has lowercase)
+            if [[ "$word" =~ ^[A-Z][a-zA-Z0-9]*$ ]] && [[ "$word" =~ [a-z] ]] && [[ "$word" =~ [A-Z] ]]; then
+                # Word is already camelCase, preserve it
+                result="${result}${word}"
+            elif [[ "$word" =~ ^[0-9]+$ ]]; then
+                # Pure numeric word, keep as is
+                result="${result}${word}"
+            elif [[ "$word" =~ ^[0-9]+[A-Z][a-zA-Z]*$ ]] && [[ "$word" =~ [a-z] ]]; then
+                # Word starts with numbers followed by camelCase (like "82426017PhysiwellMaume"), preserve it
+                result="${result}${word}"
+            else
+                # Convert to lowercase first, then capitalize first letter
+                local lowercase_word=$(echo "$word" | tr '[:upper:]' '[:lower:]')
+                first_char=$(echo "${lowercase_word:0:1}" | tr '[:lower:]' '[:upper:]')
+                rest_of_word="${lowercase_word:1}"
+                capitalized="${first_char}${rest_of_word}"
+                result="${result}${capitalized}"
+            fi
         fi
     done
     
