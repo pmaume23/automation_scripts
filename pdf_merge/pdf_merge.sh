@@ -3,11 +3,8 @@
 set -euo pipefail
 
 # PDF merge helper using Ghostscript.
-# Defaults are aligned with your current merge command.
-
-DEFAULT_PASSWORD="Physiwell_M211"
 OUTPUT_FILE="merged_output.pdf"
-PASSWORD="$DEFAULT_PASSWORD"
+PASSWORD=""
 QUIET=true
 
 show_usage() {
@@ -19,7 +16,7 @@ Merge multiple PDF files with Ghostscript.
 
 OPTIONS:
   -o, --output <file>      Output PDF filename (default: merged_output.pdf)
-  -p, --password <value>   PDF password for input files (default: Physiwell_M211)
+    -p, --password <value>   PDF password for encrypted input files
   --no-quiet               Disable quiet mode (show Ghostscript logs)
   -h, --help               Show this help message
 
@@ -116,10 +113,13 @@ main() {
     gs_args=(
         -dNOPAUSE
         -dBATCH
-        -sPDFPassword="$PASSWORD"
         -sDEVICE=pdfwrite
         -sOutputFile="$OUTPUT_FILE"
     )
+
+    if [[ -n "$PASSWORD" ]]; then
+        gs_args+=(-sPDFPassword="$PASSWORD")
+    fi
 
     if [[ "$QUIET" == true ]]; then
         gs_args=(-q "${gs_args[@]}")
